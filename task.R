@@ -304,7 +304,7 @@ ggplot(data = dtest, aes(x = dtest$price, y = fit_rf)) + geom_point()  +
 sum(fit_rf)
 sum(dtest$price)
 
-cat("GLM preforms slightly better than random forest in this case (less underestimated prices)")
+cat("GLM preforms slightly better than random forest in this case (less underestimated prices)\n")
 cat("The End\n")
 cat("====================================================================\n")
 
