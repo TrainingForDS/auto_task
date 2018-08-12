@@ -10,6 +10,7 @@ library(rpart)
 library(Amelia)  # to check missing values in data (missing vs observed)
 library(e1071)   # SVM
 library(gmodels)
+library(caret)
 
 require(randomForest)
 require(MASS)
@@ -18,16 +19,22 @@ par(mfrow = c(1, 1))
 par(mar = c(7, 6, 3, 3) + 0.1)
 
 # 1. read-in data
+cat("====================================================================")
+cat("Reading data..........")
 d <- read.csv("~/a/Auto1-DS-TestData.csv", dec = ",", 
                 na.strings=c("NA", "<NA>"), stringsAsFactors = FALSE)
 
 
 # 2. check data
+cat("====================================================================")
+cat("Checking data..........")
 dim(d)
 str(d)
 #sum(is.na(d$normalized.losses))
 
 # 3. cleaning data
+cat("====================================================================")
+cat("Cleaning data..........")
 # ------------------------------------------
 #table(d$symboling,exclude=NULL)
 # contains negative ranking numbers, add largest negative to get all positive
@@ -75,7 +82,8 @@ d$engine.location=factor(d$engine.location)
 d$engine.type=factor(d$engine.type)
 d$fuel.system=factor(d$fuel.system)
 
-
+cat("====================================================================")
+cat("Drawing map with missing data..........")
 # check the map for missing variables and remove if they are (basically) empty
 missmap(d, main = "Missing values vs observed")
 # can be seen that:
@@ -112,6 +120,8 @@ d_pred_losses<-na.omit(d_pred_losses)
 
 ###########################################################
 # 4. correlations
+cat("====================================================================")
+cat("Checking correlations..........")
 
 # quick check with PCA (using only numerical val, categorial could be vectorised):
 d_pca <- subset(d,select = -c(make,fuel.type,aspiration,num.of.doors,
@@ -139,8 +149,11 @@ print(highlyCorrelated)
 
 ##############################################
 # 5. modeling
+cat("====================================================================")
+cat("Starting prediction of modeling data ..........")
 
 ## split sample in training and testing 
+cat("Splitting data to train and test ..........")
 set.seed(101011)
 # selecting 70% of data as sample from total 'n' rows of the data  
 sample_split <- sample(2, nrow(d), replace = TRUE, prob = c(0.7,0.3))
@@ -165,6 +178,7 @@ nrow(train) # check rows split
 
 #####################################################
 # will use SVM to predict missing loss values
+cat("SVM linear model training ..........")
 svm_linear <- svm(normalized.losses~., data=train, cost=50, gamma=0.5)
 summary(svm_linear)
 # now predict:
@@ -192,11 +206,13 @@ sum(test$normalized.losses)
 
 # not prefect but (most likely) better than simple mean... 
 # so now we can predict losses for missing values in subsample we created before:
+cat("Getting predictions with SVM model  ..........")
 predi <- predict(svm_linear, newdata = d_pred_losses)
 sum(predi)
 str(predi)
 
 # now let's append to original test sample
+cat("Appending predictions and creating one dataframe  ..........")
 d_pred_losses$normalized.losses <-as.integer(predi)
 #table(d_pred_losses$normalized.losses)
 
@@ -212,6 +228,7 @@ d_tot <- subset(d_tot,select = -c(fuel.system))
 # this approach should work quite well, however other models can be used
 
 # first -  split sample in training and testing 
+cat("Splitting data to train and test (now using whole data sample)..........")
 set.seed(101010)
 # selecting 70% of data as sample from total 'n' rows of the data  
 sample_split <- sample(2, nrow(d_tot), replace = TRUE, prob = c(0.7,0.3))
@@ -220,6 +237,7 @@ dtest  <- d_tot[sample_split==2, ]
 nrow(dtrain) # check rows split
 
 ### linear regression model:
+cat("Starting the GLM model  ..........")
 dm <- glm(price~., data=dtrain, family=gaussian())
 summary(dm)
 
@@ -231,6 +249,7 @@ summary(dm)
 #cat(rankMatrix(dtrain), "\n")
 #cat(rankMatrix(dtest), "\n") 
 
+cat("Getting predictions with the GLM model  ..........")
 dpred <- predict(dm, newdata = dtest)
 plot(dpred~dtest$price,
      data=dtest,
@@ -256,6 +275,7 @@ head(dpred,nrow(dtest))
 # got LM (gaussian) AIC: 2341.5
 
 # let's try random forest for comparison:
+cat("As alternative, using Random Forest to predict prices..........")
 set.seed(1010)
 rf_out <- randomForest(price ~ . ,data = dtrain, importance = T)
 print(rf_out)
@@ -284,8 +304,7 @@ ggplot(data = dtest, aes(x = dtest$price, y = fit_rf)) + geom_point()  +
 sum(fit_rf)
 sum(dtest$price)
 
-# GLM preforms slightly better than random forest in this case (less underestimated prices)
+cat("GLM preforms slightly better than random forest in this case (less underestimated prices)")
 
-# END
-
-
+cat("The End")
+cat("====================================================================")
